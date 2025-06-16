@@ -45,35 +45,43 @@ const Chat: React.FC = () => {
     });
 
     return () => {
-      socketRef.current?.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (chatBodyRef.current) {
-      chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
-    }
-  }, [messageList]);
-
-  const joinRoom = () => {    
-    if (room) {
-      socketRef.current?.emit('join_room', room);
-      setShowChat(true);
-    }
-  };
-
-  const sendMessage = async () => {
-    if (currentMessage !== '') {
-      const messageData: ChatMessage = {
-        room,
-        author: user.name,
-        message: currentMessage,
-        time: new Date().toLocaleTimeString(),
+        socketRef.current?.disconnect();
       };
+    }, []);
 
-      await socketRef.current?.emit('send_message', messageData);
-      setMessageList(prev => [...prev, messageData]);
-      setCurrentMessage('');
+    useEffect(() => {
+      if (chatBodyRef.current) {
+        chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+      }
+    }, [messageList]);
+
+    const joinRoom = () => {    
+      if (room) {
+        socketRef.current?.emit('join_room', { roomId: room, name: user.name, });
+        setShowChat(true);
+      }
+    };
+
+    const sendMessage = async () => {
+      if (currentMessage !== '') {
+        const messageData: ChatMessage = {
+          room,
+          author: user.name,
+          message: currentMessage,
+          time: new Date().toLocaleTimeString(),
+        };
+
+        await socketRef.current?.emit('send_message', messageData);
+        setMessageList(prev => [...prev, messageData]);
+        setCurrentMessage('');
+      }
+    };
+
+    const leaveRoom = () => {
+    if (socketRef.current && room) {
+      socketRef.current.emit('leave_room', { roomId: room, name: user.name });
+      setShowChat(false);
+      setMessageList([]); // limpiar mensajes si quieres
     }
   };
 
@@ -92,12 +100,21 @@ const Chat: React.FC = () => {
         </div>
       ) : (
         <div className="chat-box">
-          <div className="chat-header">Sala: {room}</div>
+          <div className="chat-header">
+            Sala: {room}
+            <button onClick={leaveRoom} style={{ float: 'right' }}>Salir</button>
+          </div>
           <div className="chat-body" ref={chatBodyRef}>
             {messageList.map((msg, index) => (
               <div
                 key={index}
-                className={`message ${msg.author === user.name ? 'own' : 'other'}`}
+                className={`message ${
+                  msg.author === user.name
+                    ? 'own'
+                    : msg.author === 'Sistema'
+                    ? 'system'
+                    : 'other'
+                }`}
               >
                 <div className="bubble">
                   <p>{msg.message}</p>
@@ -123,6 +140,5 @@ const Chat: React.FC = () => {
       )}
     </div>
   );
-};
-
+}
 export default Chat;
